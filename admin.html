@@ -138,6 +138,55 @@
         let MASTER_KEY = "";
         let localUsersCache = []; // คลังเก็บข้อมูลหน่วยความจำเพื่อความเร็วสูงสุด 0 วินาทีในการสืบค้น
 
+        // --- ระบบส่งข้อมูล Hybrid (รองรับทั้ง google.script.run และการเรียกผ่าน API ภายนอก เช่น GitHub Pages) ---
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbw13URX_zCQE0ImKCD6_WUu3RqfZDSAkuHceFe3YmsChIj7ScM3tzLy16vBcjPZtVAu/exec";
+
+        function callBackend(action, data, onSuccess, onFailure) {
+            const isGasEnv = typeof google !== 'undefined' && google.script && google.script.run;
+            
+            if (isGasEnv) {
+                if (action === 'getUsersList') {
+                    google.script.run
+                        .withSuccessHandler(onSuccess)
+                        .withFailureHandler(onFailure)
+                        .getUsersList(data.masterKey);
+                } else if (action === 'saveUser') {
+                    google.script.run
+                        .withSuccessHandler(onSuccess)
+                        .withFailureHandler(onFailure)
+                        .saveUser(data.userForm, data.masterKey);
+                } else if (action === 'deleteUser') {
+                    google.script.run
+                        .withSuccessHandler(onSuccess)
+                        .withFailureHandler(onFailure)
+                        .deleteUser(data.username, data.masterKey);
+                }
+            } else {
+                const formData = new URLSearchParams();
+                formData.append('action', action);
+                for (const key in data) {
+                    if (typeof data[key] === 'object') {
+                        formData.append(key, JSON.stringify(data[key]));
+                    } else {
+                        formData.append(key, data[key]);
+                    }
+                }
+                
+                fetch(GAS_API_URL, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('การเชื่อมต่อล้มเหลว (HTTP ' + response.status + ')');
+                    }
+                    return response.json();
+                })
+                .then(onSuccess)
+                .catch(onFailure);
+            }
+        }
+
         // --- ระบบรักษาความปลอดภัยชั้นแรกเมื่อเปิดโหลดหน้าแดชบอร์ด ---
         document.addEventListener('DOMContentLoaded', async () => {
             const { value: key } = await Swal.fire({
@@ -173,8 +222,8 @@
                 </tr>
             `;
 
-            google.script.run
-                .withSuccessHandler(data => {
+            callBackend('getUsersList', { masterKey: MASTER_KEY },
+                data => {
                     localUsersCache = data; // อัปเดตข้อมูลลงคลังหน่วยความจำสำรอง
                     
                     // ปลดล็อกปุ่มเพิ่มพนักงานใหม่เมื่อการรันเครือข่ายถูกต้องสมบูรณ์
@@ -184,16 +233,16 @@
                     
                     document.getElementById('connectionState').innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500 me-1"></i> เชื่อมต่อความปลอดภัยสำเร็จ';
                     renderTable(localUsersCache);
-                })
-                .withFailureHandler(err => {
+                },
+                err => {
                     Swal.fire({
                         icon: 'error',
                         title: 'ความปลอดภัยปฏิเสธการเข้าถึง',
                         text: 'รหัสผ่านหลักไม่ถูกต้อง หรือ เซิร์ฟเวอร์ปฏิเสธการเชื่อมต่อ: ' + err.message,
                         confirmButtonColor: '#c62828'
                     }).then(() => location.reload());
-                })
-                .getUsersList(MASTER_KEY);
+                }
+            );
         }
 
         // --- เรนเดอร์เรย์ชุดข้อมูลลงสู่ตารางระบบ (UI Template Architecture) ---
@@ -286,7 +335,7 @@
                 username: form.username.value.trim(),
                 password: form.password.value,
 // [NEW FEATURE] Start - ปะผุตัวแปรเพื่อรองรับ Backend ป้องกัน ReferenceError
-                passwordToSave: form.password.value,
+                passwordToSave: form.password.value,
 // [NEW FEATURE] End
                 name: form.name.value.trim(),
                 role: form.role.value
@@ -296,8 +345,8 @@
             saveBtn.disabled = true;
             saveBtn.innerHTML = '<div class="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent me-1.5 inline-block"></div> กำลังบันทึก...';
 
-            google.script.run
-                .withSuccessHandler(res => {
+            callBackend('saveUser', { userForm: data, masterKey: MASTER_KEY },
+                res => {
                     saveBtn.disabled = false;
                     saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk me-1.5"></i> บันทึกข้อมูลสิทธิ์';
                     
@@ -308,13 +357,13 @@
                     } else {
                         Swal.fire({ icon: 'error', title: 'ไม่สามารถดำเนินการได้', text: res.message, confirmButtonColor: '#c62828' });
                     }
-                })
-                .withFailureHandler(err => {
+                },
+                err => {
                     saveBtn.disabled = false;
                     saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk me-1.5"></i> บันทึกข้อมูลสิทธิ์';
                     Swal.fire({ icon: 'error', title: 'ระบบส่งข้อมูลล้มเหลว', text: err.message, confirmButtonColor: '#c62828' });
-                })
-                .saveUser(data, MASTER_KEY);
+                }
+            );
         }
 
         // --- ขบวนการลบสิทธิ์ผู้ใช้ระบบพนักงานออกจากระบบสารสนเทศ ---
@@ -333,8 +382,8 @@
                     // เปิดข้อความแจ้งโหลดเดอร์ป้องกันการคลิกซ้ำระหว่างเน็ตเวิร์กประมวลผล
                     Swal.fire({ title: 'กำลังตัดสิทธิ์ผู้ใช้งาน...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
                     
-                    google.script.run
-                        .withSuccessHandler(res => {
+                    callBackend('deleteUser', { username: username, masterKey: MASTER_KEY },
+                        res => {
                             Swal.close();
                             if(res.success) {
                                 Swal.fire({ icon: 'success', title: 'ตัดสิทธิ์ผู้ใช้งานสำเร็จ', confirmButtonColor: '#059669' });
@@ -342,12 +391,12 @@
                             } else {
                                 Swal.fire({ icon: 'error', title: 'ล้มเหลว', text: res.message, confirmButtonColor: '#c62828' });
                             }
-                        })
-                        .withFailureHandler(err => {
+                        },
+                        err => {
                             Swal.close();
                             Swal.fire({ icon: 'error', title: 'ข้อผิดพลาดระบบ', text: err.message, confirmButtonColor: '#c62828' });
-                        })
-                        .deleteUser(username, MASTER_KEY);
+                        }
+                    );
                 }
             });
         }

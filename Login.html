@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เข้าสู่ระบบสารสนเทศ - สหกรณ์การเกษตรชุมพลบุรี จำกัด</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { 
+            font-family: 'Sarabun', sans-serif; 
+            /* สถาปัตยกรรม Hybrid Fallback: ไล่เฉดสีรอไว้ล่วงหน้า หากเซิร์ฟเวอร์รูปภาพภายนอกล่ม หน้าระบบจะยังสวยงามเสถียร */
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #3b82f6 100%) !important;
+            background-image: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 58, 138, 0.85) 100%), 
+                              url('https://i.postimg.cc/cHbjz45q/Chat-GPT-Image-12-ph-kh-2569-08-56-54.png') !important;
+            background-size: cover !important;
+            background-position: center !important;
+            background-repeat: no-repeat !important;
+            background-attachment: fixed !important;
+        }
+        /* ชดเชยความลื่นไหลของการกดสลับตาเปลือกตา */
+        .password-toggle:hover {
+            color: #1e40af !important;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex items-center justify-center p-4">
+
+    <div class="bg-white/95 backdrop-blur-lg w-full max-w-md p-8 rounded-2xl shadow-2xl text-center border border-white/20 transform transition duration-300 hover:shadow-3xl">
+        <div class="mb-6">
+            <div class="w-20 h-20 bg-blue-50 border border-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm animate-bounce-slow">
+                <i class="fa-solid fa-user-shield text-3xl text-blue-800"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800 tracking-wide">เข้าสู่ระบบ MIS</h1>
+            <p class="text-gray-500 text-sm mt-1 fw-medium">ระบบสารสนเทศเพื่อการจัดการสหกรณ์การเกษตรชุมพลบุรี จำกัด</p>
+        </div>
+
+        <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4 text-left">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">ชื่อผู้ใช้งาน</label>
+                <div class="relative rounded-lg shadow-sm">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-user text-gray-400 text-sm"></i>
+                    </div>
+                    <input type="text" id="username" required 
+                        class="w-full pl-10 pr-4 py-3 bg-gray-50/50 border border-gray-200 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-200 placeholder-gray-400 text-sm"
+                        placeholder="กรอกชื่อผู้ใช้งานหรือรหัสเจ้าหน้าที่">
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">รหัสผ่านบัญชีระบบ</label>
+                <div class="relative rounded-lg shadow-sm">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-lock text-gray-400 text-sm"></i>
+                    </div>
+                    <input type="password" id="password" required
+                        class="w-full pl-10 pr-12 py-3 bg-gray-50/50 border border-gray-200 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-200 placeholder-gray-400 text-sm"
+                        placeholder="••••••••">
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                        <button type="button" onclick="togglePasswordVisibility()" class="password-toggle text-gray-400 focus:outline-none transition-colors duration-150">
+                            <i id="eyeIcon" class="fa-solid fa-eye-slash text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" id="loginBtn" 
+                class="w-full bg-blue-800 hover:bg-blue-900 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm mt-2 flex items-center justify-center">
+                <i class="fa-solid fa-right-to-bracket me-2"></i><span>เข้าใช้งานระบบ</span>
+            </button>
+        </form>
+        
+        <div id="manualLink" class="hidden mt-5 pt-4 border-t border-gray-100 bg-gray-50 rounded-xl p-3 mt-4">
+             <p class="text-xs text-gray-600 mb-2 font-medium">หากหน้าต่างหลักไม่ทำการเปลี่ยนหน้าโดยอัตโนมัติภายใน 3 วินาที</p>
+             <a id="goLink" href="#" target="_top" class="inline-flex items-center px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-full transition-all duration-150 shadow-sm animate-pulse">
+                <i class="fa-solid fa-circle-arrow-right me-1"></i> คลิกที่นี่เพื่อบังคับเข้าสู่ระบบ
+             </a>
+        </div>
+    </div>
+
+    <script>
+        // --- คอมโพเนนต์สลับสิทธิ์การมองเห็นรหัสผ่าน (Password Toggle Visibility) ---
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eyeIcon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.classList.remove('fa-eye-slash');
+                eyeIcon.classList.add('fa-eye');
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.classList.remove('fa-eye');
+                eyeIcon.classList.add('fa-eye-slash');
+            }
+        }
+
+        // --- ฟังก์ชันหลักในการบริหารจัดการทรานแซกชันการล็อกอิน ---
+        function handleLogin(e) {
+            e.preventDefault();
+            
+            const userInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const btn = document.getElementById('loginBtn');
+            const manualLinkDiv = document.getElementById('manualLink');
+            const goLink = document.getElementById('goLink');
+
+            // ตัดช่องว่างพนักงานที่ชอบกรอกวรรคเกินโดยไม่ตั้งใจ (Client-Side Validation Shield)
+            const user = userInput.value.trim();
+            const pass = passwordInput.value;
+
+            // ปิดกั้นการทำงานฟอร์มทั้งหมดชั่วคราว ป้องกันสแปมและ Brute Force Clicking 100%
+            userInput.disabled = true;
+            passwordInput.disabled = true;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin me-2"></i>กำลังตรวจสอบสิทธิ์...';
+            manualLinkDiv.classList.add('hidden');
+
+            // เรียกใช้สคริปต์สแกนสิทธิ์สถาปัตยกรรม SHA-256 หลังบ้าน
+            google.script.run
+                .withSuccessHandler(res => {
+                    if (res.success) {
+                        // บันทึกที่อยู่ URL ปลายทางลงสู่ปุ่มสำรองเตรียมการไว้ล่วงหน้า
+                        goLink.href = res.url;
+                        
+                        // แสดงข้อความต้อนรับตามลักษณนามตำแหน่ง และสิทธิ์ผู้ใช้งาน (Sequential Workflow Structure)
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'ยืนยันตัวตนสำเร็จ',
+                            text: 'ยินดีต้อนรับเจ้าหน้าที่: ' + res.name + ' (' + (res.role || 'พนักงาน') + ')',
+                            html: '<div class="text-sm text-gray-600 mt-2">กำลังเชื่อมโยงฐานข้อมูลสารสนเทศใน <b class="text-blue-600 text-lg"></b> วินาที</div>',
+                            timer: 1500, 
+                            timerProgressBar: true,
+                            showConfirmButton: false,
+                            allowOutsideClick: false,
+                            allowEscapeKey: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                                const container = Swal.getHtmlContainer().querySelector('b');
+                                let timerInterval = setInterval(() => {
+                                    if(container) container.textContent = (Swal.getTimerLeft() / 1000).toFixed(1);
+                                }, 100);
+                            }
+                        }).then(() => {
+                            // เมื่อกล่อง Swal นับถอยหลังจบลงอย่างสง่างาม ค่อยอนุญาตให้ขบวนการคิว Redirect ทำงาน
+                            manualLinkDiv.classList.remove('hidden');
+                            btn.innerHTML = '<i class="fa-solid fa-user-check me-2"></i>เชื่อมต่อสำเร็จ';
+
+                            // ย้ายคำสั่งการกระโดดหน้าเว็บหลุด Promise ออกมานอกลูปดักจับ (Bypass Edge & Safari Solution)
+                            setTimeout(function() {
+                                try { document.getElementById('goLink').click(); } catch(err) {}
+                                performRobustRedirect(res.url);
+                            }, 40);
+                        });
+
+                    } else {
+                        // คืนค่าระบบฟอร์มพร้อมให้กรอกใหม่เมื่อตรวจสอบไม่ผ่าน
+                        userInput.disabled = false;
+                        passwordInput.disabled = false;
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fa-solid fa-right-to-bracket me-2"></i><span>เข้าใช้งานระบบ</span>';
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'ตรวจสอบสิทธิ์ไม่ผ่าน',
+                            text: res.message,
+                            confirmButtonColor: '#1e3a8a'
+                        });
+                    }
+                })
+                .withFailureHandler(err => {
+                    userInput.disabled = false;
+                    passwordInput.disabled = false;
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-right-to-bracket me-2"></i><span>เข้าใช้งานระบบ</span>';
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'เครือข่ายขัดข้อง',
+                        text: 'ไม่สามารถติดต่อคลาวด์เซิร์ฟเวอร์ได้: ' + err.message,
+                        confirmButtonColor: '#c62828'
+                    });
+                })
+                .verifyLogin(user, pass);
+        }
+
+        // --- กลไกบังคับการก้าวข้ามแผง iFrame Sandbox (Robust Core Engine) ---
+        function performRobustRedirect(url) {
+            console.log("Executing robust redirect framework to target: " + url);
+            
+            // วิธีที่ 1: จัดส่งสิทธิ์แบบฟอร์มส่งข้อมูลผ่านเครือข่ายตัดหน้าจอ iFrame (ดีที่สุดในระบบปิด)
+            try {
+                var form = document.createElement('form');
+                form.action = url;
+                form.method = 'GET';
+                form.target = '_top';
+                document.body.appendChild(form);
+                form.submit();
+            } catch (e) { console.warn("Redirection pipeline 1 failed", e); }
+
+            // วิธีที่ 2: จำลองแรงกระแทกจากเมาส์เจ้าหน้าที่ขั้นรุนแรง (Virtual Click Event)
+            try {
+                var link = document.createElement('a');
+                link.href = url;
+                link.target = '_top';
+                document.body.appendChild(link);
+                var ev = document.createEvent('MouseEvents');
+                ev.initMouseEvent('click', true, true, window, 1, 0, 0, 0, 0, false, false, false, false, 0, null);
+                link.dispatchEvent(ev);
+            } catch (e) { console.warn("Redirection pipeline 2 failed", e); }
+
+            // วิธีที่ 3: ระบบย้าย Location ตรงตัวระบุชั้นสูงสุด (Ultimate Fallback)
+            try { window.top.location.href = url; } catch (e) {}
+            try { window.open(url, '_top'); } catch (e) {}
+        }
+    </script>
+    <style>
+  /* ทำให้ body ยืดเต็มพื้นที่ 100% ของคอนเทนเนอร์ */
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    overflow: hidden; /* ป้องกันไม่ให้มี Scrollbar สองชั้น */
+  }
+
+  /* ทำให้ส่วนคอนเทนเนอร์หลักเต็มหน้าจอ */
+  #app-container {
+    width: 100vw;
+    height: 100vh;
+  }
+</style>
+</body>
+</html>

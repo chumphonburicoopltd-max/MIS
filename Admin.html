@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการผู้ใช้งาน (Admin) - สหกรณ์การเกษตรชุมพลบุรี จำกัด</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { 
+            font-family: 'Sarabun', sans-serif; 
+            background-color: #f8fafc;
+        }
+        .table-container {
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03);
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-6 bg-slate-50 min-h-screen">
+
+    <div class="max-w-5xl mx-auto space-y-6">
+        
+        <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-800 flex items-center">
+                    <div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 me-3 border border-emerald-100 shadow-sm">
+                        <i class="fa-solid fa-users-gear text-lg"></i>
+                    </div>
+                    ระบบควบคุมและจัดการสิทธิ์ผู้ใช้งาน (MIS Admin)
+                </h1>
+                <p class="text-slate-500 text-sm mt-1 font-medium pl-13">เพิ่ม ลบ แก้ไข และควบคุมบทบาทหน้าที่เจ้าหน้าที่สารสนเทศสหกรณ์</p>
+            </div>
+            <button onclick="openModal()" id="addNewUserBtn" disabled class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all duration-150 flex items-center justify-center transform active:scale-95 opacity-50 cursor-not-allowed">
+                <i class="fa-solid fa-user-plus mr-2"></i>เพิ่มบัญชีผู้ใช้ใหม่
+            </button>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm p-4 border border-slate-100 flex flex-col md:flex-row gap-4 justify-between items-center">
+            <div class="w-full md:max-w-md relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fa-solid fa-magnifying-glass text-slate-400 text-sm"></i>
+                </div>
+                <input type="text" id="tableSearch" oninput="executeClientFiltering()" placeholder="ค้นหาตามชื่อบัญชี, ชื่อ-นามสกุลจริงเจ้าหน้าที่..." 
+                    class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none transition-all text-sm">
+            </div>
+            <div class="text-xs text-slate-400 font-medium bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100" id="connectionState">
+                <i class="fa-solid fa-shield-halved text-amber-500 me-1"></i> รอการตรวจสอบสิทธิ์ความปลอดภัย...
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden table-container">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-800 text-white text-xs font-semibold uppercase tracking-wider">
+                            <th class="p-4 border-b border-slate-700">ชื่อผู้ใช้ (Username)</th>
+                            <th class="p-4 border-b border-slate-700">ชื่อ-นามสกุล เจ้าหน้าที่สหกรณ์</th>
+                            <th class="p-4 border-b border-slate-700 text-center" width="15%">รหัสผ่านนิรภัย</th>
+                            <th class="p-4 border-b border-slate-700 text-center" width="15%">ระดับสิทธิ์การเข้าถึง</th>
+                            <th class="p-4 border-b border-slate-700 text-center" width="15%">การจัดการสิทธิ์</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody" class="text-slate-700 divide-y divide-slate-100 text-sm">
+                        <tr>
+                            <td colspan="5" class="text-center p-8 text-slate-400 font-medium">
+                                <div class="inline-block animate-spin rounded-full h-5 w-5 border-2 border-slate-300 border-t-slate-600 me-2 align-middle"></div>
+                                กำลังรอการตรวจสอบความปลอดภัยจากระบบคลาวด์...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="userModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4 transition-all duration-200">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 border border-slate-100 transform scale-95 transition-all duration-200">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+                <h3 class="text-lg font-bold text-slate-800 flex items-center" id="modalTitle">
+                    <i class="fa-solid fa-user-pen text-emerald-600 me-2"></i>เพิ่มบัญชีผู้ใช้งาน
+                </h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <form id="userForm" onsubmit="handleSave(event)" class="space-y-4">
+                <input type="hidden" id="isEdit" name="isEdit" value="false">
+                <input type="hidden" id="originalUsername" name="originalUsername">
+                
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">ชื่อผู้ใช้ (Username สำหรับล็อกอิน)</label>
+                    <input type="text" id="username" name="username" required 
+                        class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none transition text-sm font-semibold text-slate-800">
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">รหัสผ่านระบบความปลอดภัย (Password)</label>
+                    <div class="relative rounded-xl shadow-sm">
+                        <input type="password" id="password" name="password" required 
+                            class="w-full p-2.5 pr-10 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none transition text-sm text-slate-800">
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                            <button type="button" onclick="togglePasswordDisplay()" class="text-slate-400 hover:text-slate-600 focus:outline-none">
+                                <i id="eyeIcon" class="fa-solid fa-eye-slash text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <small id="passwordNotice" class="text-[11px] text-slate-400 font-medium mt-1 block hidden">*ระบบจะคงรหัสผ่านแฮชเดิมไว้ในเครื่องหากท่านไม่แก้ไขข้อมูลจุดนี้</small>
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">ชื่อ-นามสกุล เจ้าหน้าที่ผู้ใช้งานจริง</label>
+                    <input type="text" id="name" name="name" required 
+                        class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none transition text-sm">
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">ระดับสิทธิ์และการเข้าถึงโครงสร้างข้อมูล</label>
+                    <select id="role" name="role" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm font-medium text-slate-700">
+                        <option value="user">User (เจ้าหน้าที่ปฏิบัติงานทั่วไป)</option>
+                        <option value="admin">Admin (ผู้ดูแลระบบสารสนเทศระดับสูง)</option>
+                    </select>
+                </div>
+
+                <div class="flex justify-end space-x-2 pt-4 border-t border-slate-100 mt-6">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold rounded-xl transition">ยกเลิก</button>
+                    <button type="submit" id="saveFormBtn" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition transform active:scale-95 flex items-center">
+                        <i class="fa-solid fa-floppy-disk me-1.5"></i> บันทึกข้อมูลสิทธิ์
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let MASTER_KEY = "";
+        let localUsersCache = []; // คลังเก็บข้อมูลหน่วยความจำเพื่อความเร็วสูงสุด 0 วินาทีในการสืบค้น
+
+        // --- ระบบรักษาความปลอดภัยชั้นแรกเมื่อเปิดโหลดหน้าแดชบอร์ด ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { value: key } = await Swal.fire({
+                title: 'ยืนยันรหัสความปลอดภัย',
+                text: 'โปรดระบุรหัสผ่านแอดมินสูงสุด (Admin Key) เพื่อสิทธิ์เข้าถึงชั้นข้อมูลพนักงาน',
+                input: 'password',
+                inputLabel: 'ความปลอดภัยระบบตรวจสอบบัญชีสหกรณ์',
+                inputPlaceholder: '••••••••••••',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                confirmButtonColor: '#1e293b',
+                confirmButtonText: 'ยืนยันความปลอดภัย',
+                inputValidator: (value) => {
+                    if (!value) return 'ท่านจำเป็นต้องระบุรหัสผ่านก่อนเข้าสู่ระบบงาน!'
+                }
+            });
+
+            if (key) {
+                MASTER_KEY = key;
+                loadUsers();
+            }
+        });
+
+        // --- ดึงข้อมูลเจ้าหน้าที่ทั้งหมดข้ามระบบเครือข่าย ---
+        function loadUsers() {
+            const tbody = document.getElementById('userTableBody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center p-8 text-slate-400 font-medium">
+                        <div class="inline-block animate-spin rounded-full h-5 w-5 border-2 border-slate-300 border-t-emerald-600 me-2 align-middle"></div>
+                        กำลังติดต่อฐานข้อมูลผู้ใช้ระบบ...
+                    </td>
+                </tr>
+            `;
+
+            google.script.run
+                .withSuccessHandler(data => {
+                    localUsersCache = data; // อัปเดตข้อมูลลงคลังหน่วยความจำสำรอง
+                    
+                    // ปลดล็อกปุ่มเพิ่มพนักงานใหม่เมื่อการรันเครือข่ายถูกต้องสมบูรณ์
+                    const addBtn = document.getElementById('addNewUserBtn');
+                    addBtn.disabled = false;
+                    addBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    
+                    document.getElementById('connectionState').innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500 me-1"></i> เชื่อมต่อความปลอดภัยสำเร็จ';
+                    renderTable(localUsersCache);
+                })
+                .withFailureHandler(err => {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'ความปลอดภัยปฏิเสธการเข้าถึง',
+                        text: 'รหัสผ่านหลักไม่ถูกต้อง หรือ เซิร์ฟเวอร์ปฏิเสธการเชื่อมต่อ: ' + err.message,
+                        confirmButtonColor: '#c62828'
+                    }).then(() => location.reload());
+                })
+                .getUsersList(MASTER_KEY);
+        }
+
+        // --- เรนเดอร์เรย์ชุดข้อมูลลงสู่ตารางระบบ (UI Template Architecture) ---
+        function renderTable(users) {
+            const tbody = document.getElementById('userTableBody');
+            tbody.innerHTML = '';
+            
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center p-8 text-slate-400 font-medium">ไม่พบบันทึกรายชื่อเจ้าหน้าที่ในระบบ</td></tr>';
+                return;
+            }
+
+            users.forEach(u => {
+                const username = u[0];
+                const placeholderPass = u[1]; // ค่า "••••••••" ที่ถูกหน้ากากส่งมาจาก 1.gs
+                const fullName = u[2];
+                const role = u[3];
+                
+                const isSystemAdmin = (role === 'admin');
+                const badgeClass = isSystemAdmin ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-blue-50 text-blue-700 border-blue-200';
+
+                const row = `
+                    <tr class="hover:bg-slate-50/80 transition duration-150">
+                        <td class="p-4 font-bold text-slate-900">${username}</td>
+                        <td class="p-4 font-medium text-slate-700">${fullName}</td>
+                        <td class="p-4 text-center text-slate-300 tracking-widest text-xs select-none">••••••••</td>
+                        <td class="p-4 text-center">
+                            <span class="px-2.5 py-1 rounded-lg text-xs font-bold border ${badgeClass}">
+                                ${role.toUpperCase()}
+                            </span>
+                        </td>
+                        <td class="p-4 text-center">
+                            <div class="inline-flex rounded-lg shadow-sm" role="group">
+                                <button onclick="editUser('${username}', '${placeholderPass}', '${fullName}', '${role}')" class="px-3 py-1.5 text-xs font-bold text-blue-600 bg-white border border-slate-200 rounded-l-xl hover:bg-slate-50 transition" title="แก้ไขข้อมูลพนักงาน">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button onclick="delUser('${username}')" class="px-3 py-1.5 text-xs font-bold text-red-600 bg-white border-t border-b border-r border-slate-200 rounded-r-xl hover:bg-red-50 transition" title="ลบสิทธิ์ผู้ใช้ระบบ">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
+        }
+
+        // --- ระบบกรองและค้นหาข้อมูลความเร็วสูงฝั่ง Client-side (0 วินาที ไม่เปลือง Quota เซิร์ฟเวอร์) ---
+        function executeClientFiltering() {
+            const query = document.getElementById('tableSearch').value.toLowerCase().trim();
+            
+            if (!query) {
+                renderTable(localUsersCache);
+                return;
+            }
+
+            const filtered = localUsersCache.filter(user => {
+                return user[0].toLowerCase().includes(query) || user[2].toLowerCase().includes(query);
+            });
+
+            renderTable(filtered);
+        }
+
+        // --- สลับการแสดงผลรหัสผ่านแบบ Eye Toggle Switch Component ---
+        function togglePasswordDisplay() {
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eyeIcon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.classList.remove('fa-eye-slash');
+                eyeIcon.classList.add('fa-eye');
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.classList.remove('fa-eye');
+                eyeIcon.classList.add('fa-eye-slash');
+            }
+        }
+
+        // --- ขบวนการส่งข้อมูลและบันทึกสิทธิ์ลงคลาวด์ชีต (Network Layer Lock Protection) ---
+        function handleSave(e) {
+            e.preventDefault();
+            
+            const form = document.getElementById('userForm');
+            const saveBtn = document.getElementById('saveFormBtn');
+            
+            const data = {
+                isEdit: form.isEdit.value,
+                originalUsername: form.originalUsername.value,
+                username: form.username.value.trim(),
+                password: form.password.value,
+// [NEW FEATURE] Start - ปะผุตัวแปรเพื่อรองรับ Backend ป้องกัน ReferenceError
+                passwordToSave: form.password.value,
+// [NEW FEATURE] End
+                name: form.name.value.trim(),
+                role: form.role.value
+            };
+
+            // ติดตั้งเกราะความปลอดภัยปิดช่องกรอกข้อมูลและปุ่มกด ป้องกันการกด Enter รัวๆ เบิ้ลรายการ
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<div class="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent me-1.5 inline-block"></div> กำลังบันทึก...';
+
+            google.script.run
+                .withSuccessHandler(res => {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk me-1.5"></i> บันทึกข้อมูลสิทธิ์';
+                    
+                    if (res.success) {
+                        closeModal();
+                        Swal.fire({ icon: 'success', title: 'บันทึกข้อมูลสำเร็จ', text: 'ระบบลงทะเบียนปรับสิทธิ์เจ้าหน้าที่พนักงานเรียบร้อย', confirmButtonColor: '#059669' });
+                        loadUsers(); // โหลดข้อมูลสดใหม่จากคลาวด์เข้าสู่เครื่อง
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'ไม่สามารถดำเนินการได้', text: res.message, confirmButtonColor: '#c62828' });
+                    }
+                })
+                .withFailureHandler(err => {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk me-1.5"></i> บันทึกข้อมูลสิทธิ์';
+                    Swal.fire({ icon: 'error', title: 'ระบบส่งข้อมูลล้มเหลว', text: err.message, confirmButtonColor: '#c62828' });
+                })
+                .saveUser(data, MASTER_KEY);
+        }
+
+        // --- ขบวนการลบสิทธิ์ผู้ใช้ระบบพนักงานออกจากระบบสารสนเทศ ---
+        function delUser(username) {
+            Swal.fire({
+                title: 'ยืนยันเพิกถอนสิทธิ์ระบบ?',
+                text: `บัญชีผู้ใช้งาน "${username}" จะถูกลบออกถาวรและไม่สามารถเข้าใช้งานระบบ MIS ตรวจสอบบัญชีได้อีกต่อไป`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#475569',
+                confirmButtonText: 'ยืนยันลบสิทธิ์ถาวร',
+                cancelButtonText: 'ยกเลิกคำสั่ง'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // เปิดข้อความแจ้งโหลดเดอร์ป้องกันการคลิกซ้ำระหว่างเน็ตเวิร์กประมวลผล
+                    Swal.fire({ title: 'กำลังตัดสิทธิ์ผู้ใช้งาน...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    
+                    google.script.run
+                        .withSuccessHandler(res => {
+                            Swal.close();
+                            if(res.success) {
+                                Swal.fire({ icon: 'success', title: 'ตัดสิทธิ์ผู้ใช้งานสำเร็จ', confirmButtonColor: '#059669' });
+                                loadUsers();
+                            } else {
+                                Swal.fire({ icon: 'error', title: 'ล้มเหลว', text: res.message, confirmButtonColor: '#c62828' });
+                            }
+                        })
+                        .withFailureHandler(err => {
+                            Swal.close();
+                            Swal.fire({ icon: 'error', title: 'ข้อผิดพลาดระบบ', text: err.message, confirmButtonColor: '#c62828' });
+                        })
+                        .deleteUser(username, MASTER_KEY);
+                }
+            });
+        }
+
+        // --- ฟังก์ชันการเปิด-ปิดและรีเซ็ตค่าอินเทอร์เฟซ Modal Controls ---
+        function openModal() {
+            document.getElementById('userModal').classList.remove('hidden');
+            document.getElementById('userForm').reset();
+            document.getElementById('isEdit').value = "false";
+            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-user-plus text-emerald-600 me-2"></i>เพิ่มบัญชีผู้ใช้งานใหม่';
+            document.getElementById('passwordNotice').classList.add('hidden');
+            document.getElementById('username').disabled = false;
+            
+            // รีเซ็ตหน้าต่างช่องรหัสผ่านเป็นประเภทความปลอดภัย
+            document.getElementById('password').type = "password";
+            document.getElementById('eyeIcon').className = "fa-solid fa-eye-slash text-xs";
+        }
+
+        function editUser(u, p, n, r) {
+            openModal();
+            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-user-pen text-blue-600 me-2"></i>แก้ไขข้อมูลสิทธิ์และรหัสผ่าน';
+            document.getElementById('isEdit').value = "true";
+            document.getElementById('originalUsername').value = u;
+            document.getElementById('username').value = u;
+            document.getElementById('username').disabled = true; // มาตรฐานสากล: ล็อกฟิลด์ Primary Key (Username) ไม่ให้แก้ไขตอน Edit
+            document.getElementById('password').value = p; // รับค่าหน้ากาก "••••••••" ไปรอไว้ปลอดภัยในฟิลด์พาสเวิร์ด
+            document.getElementById('name').value = n;
+            document.getElementById('role').value = r;
+            document.getElementById('passwordNotice').classList.remove('hidden'); // แสดงข้อความแนะนำเรื่องรหัสเก่าอัตโนมัติ
+        }
+
+        function closeModal() {
+            document.getElementById('userModal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

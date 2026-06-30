@@ -100,6 +100,45 @@
             }
         }
 
+        // --- ระบบส่งข้อมูล Hybrid (รองรับทั้ง google.script.run และการเรียกผ่าน API ภายนอก เช่น GitHub Pages) ---
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbw13URX_zCQE0ImKCD6_WUu3RqfZDSAkuHceFe3YmsChIj7ScM3tzLy16vBcjPZtVAu/exec";
+
+        function callBackend(action, data, onSuccess, onFailure) {
+            const isGasEnv = typeof google !== 'undefined' && google.script && google.script.run;
+            
+            if (isGasEnv) {
+                if (action === 'verifyLogin') {
+                    google.script.run
+                        .withSuccessHandler(onSuccess)
+                        .withFailureHandler(onFailure)
+                        .verifyLogin(data.username, data.password);
+                }
+            } else {
+                const formData = new URLSearchParams();
+                formData.append('action', action);
+                for (const key in data) {
+                    if (typeof data[key] === 'object') {
+                        formData.append(key, JSON.stringify(data[key]));
+                    } else {
+                        formData.append(key, data[key]);
+                    }
+                }
+                
+                fetch(GAS_API_URL, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('การเชื่อมต่อล้มเหลว (HTTP ' + response.status + ')');
+                    }
+                    return response.json();
+                })
+                .then(onSuccess)
+                .catch(onFailure);
+            }
+        }
+
         // --- ฟังก์ชันหลักในการบริหารจัดการทรานแซกชันการล็อกอิน ---
         function handleLogin(e) {
             e.preventDefault();
@@ -121,9 +160,9 @@
             btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin me-2"></i>กำลังตรวจสอบสิทธิ์...';
             manualLinkDiv.classList.add('hidden');
 
-            // เรียกใช้สคริปต์สแกนสิทธิ์สถาปัตยกรรม SHA-256 หลังบ้าน
-            google.script.run
-                .withSuccessHandler(res => {
+            // เรียกใช้ระบบตรวจสอบสิทธิ์
+            callBackend('verifyLogin', { username: user, password: pass }, 
+                res => {
                     if (res.success) {
                         // บันทึกที่อยู่ URL ปลายทางลงสู่ปุ่มสำรองเตรียมการไว้ล่วงหน้า
                         goLink.href = res.url;
@@ -171,8 +210,8 @@
                             confirmButtonColor: '#1e3a8a'
                         });
                     }
-                })
-                .withFailureHandler(err => {
+                },
+                err => {
                     userInput.disabled = false;
                     passwordInput.disabled = false;
                     btn.disabled = false;
@@ -183,8 +222,8 @@
                         text: 'ไม่สามารถติดต่อคลาวด์เซิร์ฟเวอร์ได้: ' + err.message,
                         confirmButtonColor: '#c62828'
                     });
-                })
-                .verifyLogin(user, pass);
+                }
+            );
         }
 
         // --- กลไกบังคับการก้าวข้ามแผง iFrame Sandbox (Robust Core Engine) ---
